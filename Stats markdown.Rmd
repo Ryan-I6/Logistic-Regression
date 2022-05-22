@@ -1,0 +1,191 @@
+---
+title: "Stats project 2022"
+author: "Ryan Isaacs 202001716"
+date: "04/05/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+```{r packages, message=FALSE}
+
+
+## Installing Packages
+library(readr)
+require(MASS)
+require(ResourceSelection)
+
+
+```
+
+
+```{r Loading data,message=FALSE}
+
+#Loading the data set
+Data <- read_csv("Group5Ethereum.csv")
+
+```
+
+```{r EDA}
+
+dim(Data)
+
+```
+We see 3 columns in our data with 1626 rows. 
+
+```{r EDA1}
+
+#Exploring the data
+head(Data)
+
+Y <-cbind(Data$Direction)
+X <- cbind(Data$Price, Data$Volume)
+
+```
+
+The 3 columns being Direction, Price, Volume. Direction is dichotomous while Price and Volume is continuous.
+
+
+```{r EDA2}
+
+table(Y)/sum(table(Y))
+
+```
+Table shows an evenly split in the target variable (Direction). This means that the data set is balanced.
+
+
+```{r EDA3}
+
+summary(Data)
+
+```
+Out of the 1626 records taken:
+The average price in the data was 252.58 and 
+The average trades made (volume) was 39 091 197
+
+Max price recorded was 1386.02 and 
+Max Volume/number of trades was 736 027 536
+
+Lowest price was 6.69 and lowest volume was 0
+
+
+```{r boxplotPrice}
+
+boxplot(Data$Price)
+
+```
+Boxplot of Price         
+Taking the box plot of Price we can see that the data is quite centered and this is a visual representation that the data does follow thee assumption that the data has a normal distribution.
+
+
+```{r boxplotVolume}
+
+boxplot(Data$Volume)
+
+```
+Boxplot of Volunme             
+The output of the boxplot for volume shows similar properties to price and we can assume that the distribution of the data is normal. The boxplot also shows the amount and magnitude of the outliers.
+
+```{r Parameters of Logistic Regression model}
+LR <- glm(Y ~ X, family=binomial (link = "logit"), data =Data )
+summary(LR) 
+```
+
+Firstly we see a high AIC value which indicates that the model fits the data well. This is also verified by the Null and Residual deviance(The fact they only differ by 3.5)
+
+The summary shows that a higher price is less likely make the direction of Ethereum go up. Where as a higher volume is more likely to make the direction go up.
+
+Null hypothesis : There is no significant effects from the variable. 
+P values price and volume also show that they both don't have significant effects. as we fail to reject the null hypothesis. This shows us that Price and volume are not strong predictors for the the direction. hence there is no multi-collinearity among the variables
+
+
+```{r Marginal Effects}
+
+MarginalEffects <- mean(dlogis(predict(LR, type = "link")))
+MarginalEffects * coef(LR)
+
+```
+
+The marginal effects also shows that an increase in a unit price (X1) is 4.99% more likely to drop the direction of ethereum. 
+while each additional unit increase in the volume (X2) is 0.02% more likely to increase the outcome that y=1 (rise the direction of ethereum)
+
+```{r Odd rations}
+
+exp(LR$coefficients)
+
+```
+
+Odd ratios are the same for both 0(X2) and 1(X1). This means that the direction has a 50/50 chance of going up or down.
+
+```{r Goodness of Fit}
+
+gof <- hoslem.test(LR$y, fitted(LR), g=15)
+gof
+
+```
+Null hypothesis : the model fits the distribution of the data.
+P value shows that we accept the null hypothesis and conclude that the model fits the data and is indeed a good fit.
+
+```{r ANOVA}
+
+anova(LR, test="Chisq")
+
+```
+Null hypothesis : Price and volume have no association to direction.
+ANOVA p values show that the predictor variables have no association to the response.
+
+
+```{r predictions}
+
+#comparing the predicted values from the observed values
+plogit<- predict(LR, type="response")
+head(cbind(Y,plogit))
+tail(cbind(Y,plogit))
+
+```
+
+In the code above the first column shows the true value of the direction while the second column shows the calculated predicted values from the logistic regression model.
+
+```{r confusion matrix}
+
+cmat<-table(true = Y, pred = round(fitted(LR))) 
+cmat
+
+```
+The diagonals show the correctly predicted values as well as the values it predicted incorrect.
+422 type 1 errors and 346 type 2 errors
+
+```{r correct predictions}
+
+pcpredict<-((cmat[1,1]+cmat[2,2])/length(LR$y))*100
+pcpredict
+
+```
+
+The model predicted 52.8% of the values correctly.
+
+```{r Incorrect predictions}
+
+100-pcpredict
+
+```
+WHile it predicted 47.2% of the values incorrectly.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
